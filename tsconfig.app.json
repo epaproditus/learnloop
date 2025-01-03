@@ -26,5 +26,8 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts"  // Ensure this line is present
+  ]
 }

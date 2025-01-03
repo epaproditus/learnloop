@@ -23,7 +23,7 @@ class GoogleClassroomService {
       await this.loadGoogleClassroomAPI();
       this.isInitialized = true;
       console.log('Google Classroom API initialized successfully');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Failed to initialize Google Classroom:", error);
       throw error;
     }
@@ -36,29 +36,35 @@ class GoogleClassroomService {
       script.src = "https://apis.google.com/js/api.js";
       script.onload = () => {
         console.log('Google API client loaded, initializing...');
-        gapi.load("client:auth2", async () => {
-          try {
-            await gapi.client.init({
-              apiKey: import.meta.env.VITE_GOOGLE_API_KEY,
-              clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-              discoveryDocs: [
-                "https://classroom.googleapis.com/$discovery/rest?version=v1",
-              ],
-              scope: [
-                "https://www.googleapis.com/auth/classroom.courses.readonly",
-                "https://www.googleapis.com/auth/classroom.coursework.students",
-                "https://www.googleapis.com/auth/classroom.rosters.readonly",
-              ].join(" "),
-            });
-            console.log('Google API client initialized successfully');
-            resolve();
-          } catch (error) {
-            console.error('Failed to initialize Google API client:', error);
+        window.gapi.load("client:auth2", {
+          callback: async () => {
+            try {
+              await window.gapi.client.init({
+                apiKey: import.meta.env.VITE_GOOGLE_API_KEY,
+                clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+                discoveryDocs: [
+                  "https://classroom.googleapis.com/$discovery/rest?version=v1",
+                ],
+                scope: [
+                  "https://www.googleapis.com/auth/classroom.courses.readonly",
+                  "https://www.googleapis.com/auth/classroom.coursework.students",
+                  "https://www.googleapis.com/auth/classroom.rosters.readonly",
+                ].join(" "),
+              });
+              console.log('Google API client initialized successfully');
+              resolve();
+            } catch (error: unknown) {
+              console.error('Failed to initialize Google API client:', error);
+              reject(error);
+            }
+          },
+          onerror: (error: string | Event) => {
+            console.error('Failed to load Google API client:', error);
             reject(error);
           }
         });
       };
-      script.onerror = () => {
+      script.onerror = (error: string | Event) => {
         console.error('Failed to load Google API script');
         reject(new Error("Failed to load Google API"));
       };
@@ -71,13 +77,13 @@ class GoogleClassroomService {
       await this.initialize();
     }
     console.log('Signing in to Google...');
-    await gapi.auth2.getAuthInstance().signIn();
+    await window.gapi.auth2.getAuthInstance().signIn();
     console.log('Successfully signed in to Google');
   }
 
   async signOut(): Promise<void> {
     if (!this.isInitialized) return;
-    await gapi.auth2.getAuthInstance().signOut();
+    await window.gapi.auth2.getAuthInstance().signOut();
   }
 
   async getCourses(): Promise<GoogleClassroomCourse[]> {
@@ -88,7 +94,12 @@ class GoogleClassroomService {
 
     try {
       console.log('Fetching courses from Google Classroom...');
-      const response = await gapi.client.classroom.courses.list({
+      const auth = window.gapi.auth2.getAuthInstance();
+      if (!auth.isSignedIn.get()) {
+        await this.signIn();
+      }
+
+      const response = await window.gapi.client.classroom.courses.list({
         pageSize: 100,
         courseStates: ["ACTIVE"],
       });
@@ -110,7 +121,11 @@ class GoogleClassroomService {
       await this.initialize();
     }
 
-    // Convert our assignment format to Google Classroom format
+    const auth = window.gapi.auth2.getAuthInstance();
+    if (!auth.isSignedIn.get()) {
+      await this.signIn();
+    }
+
     const courseWork = {
       courseId,
       title: assignment.title,
@@ -126,9 +141,9 @@ class GoogleClassroomService {
           },
         },
       ],
-    } as GoogleClassroomAssignment;
+    };
 
-    const response = await gapi.client.classroom.courses.courseWork.create({
+    const response = await window.gapi.client.classroom.courses.courseWork.create({
       courseId,
       resource: courseWork,
     });
@@ -141,15 +156,21 @@ class GoogleClassroomService {
     assignmentId: string
   ): Promise<GoogleClassroomSubmission[]> {
     if (!this.isInitialized) {
+      console.log('Initializing before getting student submissions...');
       await this.initialize();
     }
 
-    const response = await gapi.client.classroom.courses.courseWork.studentSubmissions.list({
-      courseId,
-      courseWorkId: assignmentId,
-    });
+    try {
+      const response = await window.gapi.client.classroom.courses.courseWork.studentSubmissions.list({
+        courseId,
+        courseWorkId: assignmentId,
+      });
 
-    return response.result.studentSubmissions || [];
+      return response.result.studentSubmissions || [];
+    } catch (error) {
+      console.error('Error fetching student submissions:', error);
+      throw error;
+    }
   }
 
   async updateAssignmentGrade(
@@ -159,19 +180,25 @@ class GoogleClassroomService {
     grade: number
   ): Promise<void> {
     if (!this.isInitialized) {
+      console.log('Initializing before updating assignment grade...');
       await this.initialize();
     }
 
-    await gapi.client.classroom.courses.courseWork.studentSubmissions.patch({
-      courseId,
-      courseWorkId,
-      id: studentId,
-      updateMask: "assignedGrade,draftGrade",
-      resource: {
-        assignedGrade: grade,
-        draftGrade: grade,
-      },
-    });
+    try {
+      await window.gapi.client.classroom.courses.courseWork.studentSubmissions.patch({
+        courseId,
+        courseWorkId,
+        id: studentId,
+        updateMask: "assignedGrade,draftGrade",
+        resource: {
+          assignedGrade: grade,
+          draftGrade: grade,
+        },
+      });
+    } catch (error) {
+      console.error('Error updating assignment grade:', error);
+      throw error;
+    }
   }
 }
 

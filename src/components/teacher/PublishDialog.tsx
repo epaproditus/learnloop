@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { Assignment } from "../../types/Assignment";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -43,13 +44,17 @@ export function PublishDialog({
       }
     } catch (error) {
       console.error("Failed to load courses:", error);
+      toast.error("Failed to load courses. Please ensure you're signed in to Google Classroom.");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handlePublish = async () => {
-    if (!selectedCourseId) return;
+    if (!selectedCourseId) {
+      toast.error("Please select a course");
+      return;
+    }
 
     try {
       setIsLoading(true);
@@ -59,9 +64,11 @@ export function PublishDialog({
         due_date: dueDate || undefined,
       };
       await onPublish(selectedCourseId, updatedAssignment);
+      toast.success("Assignment published successfully");
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to publish assignment:", error);
+      toast.error("Failed to publish assignment. Please try again.");
     } finally {
       setIsLoading(false);
     }

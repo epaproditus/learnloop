@@ -16,10 +16,8 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     storage: window.localStorage,
     storageKey: 'learnloop-auth',
     flowType: "pkce",
-    redirectTo: window.location.origin // This will automatically handle localhost:8080
   },
 });
-
 
 // Helper types for better type inference
 export type DbResult<T> = T extends PromiseLike<infer U> ? U : never;
@@ -37,4 +35,10 @@ export function ensureArray<T>(data: T | T[] | null): T[] {
 export function ensureNonNullable<T>(data: T | null): T {
   if (data === null) throw new Error("Unexpected null value");
   return data;
+}
+
+// Type assertion helper for Supabase responses
+export function assertType<T>(data: unknown): asserts data is T {
+  // This is a type assertion function that does nothing at runtime
+  // It's used to tell TypeScript that a value is of a certain type
 }

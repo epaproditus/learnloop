@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";/** @jsx React.createElement */
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { supabase, ensureArray } from "../../lib/supabase";
