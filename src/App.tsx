@@ -25,11 +25,13 @@ function App() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      console.log("Auth state changed:", _event, session); // Debug log
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
+  // Handle loading state
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -43,6 +45,17 @@ function App() {
       <div className="min-h-screen bg-gray-50">
         <Router>
           <Routes>
+            {/* Handle root route - redirect based on auth state */}
+            <Route
+              path="/"
+              element={
+                session ? (
+                  <Navigate to="/teacher" replace />
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              }
+            />
             <Route path="/login" element={<Login />} />
             <Route
               path="/teacher"
@@ -68,7 +81,6 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="/" element={<Navigate to="/login" replace />} />
           </Routes>
         </Router>
       </div>

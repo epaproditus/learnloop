@@ -16,8 +16,10 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     storage: window.localStorage,
     storageKey: 'learnloop-auth',
     flowType: "pkce",
+    redirectTo: window.location.origin // This will automatically handle localhost:8080
   },
 });
+
 
 // Helper types for better type inference
 export type DbResult<T> = T extends PromiseLike<infer U> ? U : never;

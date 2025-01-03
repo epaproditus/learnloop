@@ -4,31 +4,50 @@ import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { useDevMode } from "../../contexts/DevModeContext";
 import { supabase } from "../../lib/supabase";
+import { useToast } from "@/hooks/use-toast";
 
 export function LoginCard() {
   const navigate = useNavigate();
   const location = useLocation();
   const { isDevMode, setIsDevMode } = useDevMode();
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const handleGoogleLogin = async () => {
     try {
       setIsLoading(true);
-      const { error } = await supabase.auth.signInWithOAuth({
+      console.log("Starting Google login process...");
+      console.log("Current origin:", window.location.origin);
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
-            scope: 'https://www.googleapis.com/auth/classroom.courses https://www.googleapis.com/auth/classroom.coursework.students https://www.googleapis.com/auth/classroom.rosters',
           },
-          redirectTo: window.location.origin + '/teacher',
+          redirectTo: `${window.location.origin}/teacher`,
         },
       });
 
-      if (error) throw error;
+      console.log("Auth response:", { data, error });
+
+      if (error) {
+        console.error("Detailed auth error:", error);
+        toast({
+          title: "Authentication Error",
+          description: error.message,
+          variant: "destructive",
+        });
+        throw error;
+      }
     } catch (error) {
-      console.error('Error signing in with Google:', error);
+      console.error('Detailed error signing in with Google:', error);
+      toast({
+        title: "Login Failed",
+        description: "There was a problem signing in with Google. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }

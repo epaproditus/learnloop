@@ -19,9 +19,10 @@ class GoogleClassroomService {
     if (this.isInitialized) return;
 
     try {
-      // Load the Google Classroom API client
+      console.log('Initializing Google Classroom API...');
       await this.loadGoogleClassroomAPI();
       this.isInitialized = true;
+      console.log('Google Classroom API initialized successfully');
     } catch (error) {
       console.error("Failed to initialize Google Classroom:", error);
       throw error;
@@ -30,10 +31,11 @@ class GoogleClassroomService {
 
   private async loadGoogleClassroomAPI(): Promise<void> {
     return new Promise((resolve, reject) => {
-      // Load the Google API client library
+      console.log('Loading Google API client...');
       const script = document.createElement("script");
       script.src = "https://apis.google.com/js/api.js";
       script.onload = () => {
+        console.log('Google API client loaded, initializing...');
         gapi.load("client:auth2", async () => {
           try {
             await gapi.client.init({
@@ -45,17 +47,21 @@ class GoogleClassroomService {
               scope: [
                 "https://www.googleapis.com/auth/classroom.courses.readonly",
                 "https://www.googleapis.com/auth/classroom.coursework.students",
-                "https://www.googleapis.com/auth/classroom.coursework.me",
                 "https://www.googleapis.com/auth/classroom.rosters.readonly",
               ].join(" "),
             });
+            console.log('Google API client initialized successfully');
             resolve();
           } catch (error) {
+            console.error('Failed to initialize Google API client:', error);
             reject(error);
           }
         });
       };
-      script.onerror = () => reject(new Error("Failed to load Google API"));
+      script.onerror = () => {
+        console.error('Failed to load Google API script');
+        reject(new Error("Failed to load Google API"));
+      };
       document.body.appendChild(script);
     });
   }
@@ -64,7 +70,9 @@ class GoogleClassroomService {
     if (!this.isInitialized) {
       await this.initialize();
     }
+    console.log('Signing in to Google...');
     await gapi.auth2.getAuthInstance().signIn();
+    console.log('Successfully signed in to Google');
   }
 
   async signOut(): Promise<void> {
@@ -74,16 +82,24 @@ class GoogleClassroomService {
 
   async getCourses(): Promise<GoogleClassroomCourse[]> {
     if (!this.isInitialized) {
+      console.log('Initializing before getting courses...');
       await this.initialize();
     }
 
-    const response = await gapi.client.classroom.courses.list({
-      pageSize: 100,
-      courseStates: ["ACTIVE"],
-    });
-
-    this.courses = response.result.courses || [];
-    return this.courses;
+    try {
+      console.log('Fetching courses from Google Classroom...');
+      const response = await gapi.client.classroom.courses.list({
+        pageSize: 100,
+        courseStates: ["ACTIVE"],
+      });
+      
+      this.courses = response.result.courses || [];
+      console.log('Fetched courses:', this.courses);
+      return this.courses;
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+      throw error;
+    }
   }
 
   async publishAssignment(

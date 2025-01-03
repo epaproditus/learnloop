@@ -7,6 +7,19 @@
     <meta name="description" content="Lovable Generated Project" />
     <meta name="author" content="Lovable" />
     <meta property="og:image" content="/og-image.png" />
+    <script>
+      window.addEventListener('message', function(event) {
+        const allowedOrigins = [
+          'https://gptengineer.app',
+          'http://localhost:3000',
+          'https://lovable.dev',
+          'http://localhost:8080'
+        ];
+        if (allowedOrigins.includes(event.origin)) {
+          console.log('Received message from allowed origin:', event.origin);
+        }
+      }, false);
+    </script>
   </head>
 
   <body>
