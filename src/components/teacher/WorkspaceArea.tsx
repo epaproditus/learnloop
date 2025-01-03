@@ -396,7 +396,7 @@ function WorkspaceAreaComponent({
 
 
       {/* Drop Area */}
-      <div ref={drop} className="flex-1 relative p-4" style={{ position: 'relative', overflow: 'hidden' }}>
+      <div ref={drop} className="flex-1 relative p-4" style={{ position: 'relative', overflow: 'hidden', width: '100%', height: '80vh' }}>
         {/* Grid Background */}
         <div
           className="absolute inset-0"
