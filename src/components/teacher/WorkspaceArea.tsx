@@ -1,94 +1,25 @@
-import { useState, useEffect, useCallback } from "react";
-import { DndProvider, useDrag, useDrop } from "react-dnd";
+import { useState } from "react";
+import { DndProvider, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { XYCoord } from "react-dnd";
 import { Button } from "../ui/button";
-import { Card, CardContent } from "../ui/card";
 import { ResizableBlock } from "./blocks/ResizableBlock";
 import { TextBlock } from "./blocks/TextBlock";
 import { AnswerBlock } from "./blocks/AnswerBlock";
 import { ImageBlock } from "./blocks/ImageBlock";
 import { PreviewModal } from "./PreviewModal";
 import { PublishDialog } from "./PublishDialog";
+import { BlockTemplatesSidebar } from "./workspace/BlockTemplatesSidebar";
 import type { Assignment, Block, Position, Size } from "../../types/Assignment";
 
 const GRID_SIZE = 20;
-const SIDEBAR_WIDTH = 240;
 const DEFAULT_BLOCK_WIDTH = 600;
 const DEFAULT_BLOCK_HEIGHT = 200;
-
-interface BlockTemplate {
-  type: Block['type'];
-  icon: string;
-  label: string;
-  description: string;
-}
-
-interface TemplateCardProps {
-  template: BlockTemplate;
-}
-
-const TemplateCard: React.FC<TemplateCardProps> = ({ template }) => {
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: ItemTypes.TEMPLATE,
-    item: { type: ItemTypes.TEMPLATE, templateType: template.type },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  }));
-
-  return (
-    <Card
-      ref={drag}
-      className={`cursor-move hover:shadow-md transition-shadow ${
-        isDragging ? 'opacity-50' : 'opacity-100'
-      }`}
-    >
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <div className="text-2xl">{template.icon}</div>
-          <div>
-            <h3 className="font-medium">{template.label}</h3>
-            <p className="text-sm text-gray-500">{template.description}</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-const ItemTypes = {
-  BLOCK: 'block',
-  TEMPLATE: 'template'
-};
 
 interface DragItem {
   type: string;
   id?: string;
   templateType?: Block['type'];
-  initialOffset?: XYCoord;
 }
-
-const blockTemplates: BlockTemplate[] = [
-  {
-    type: "text",
-    icon: "📝",
-    label: "Text Block",
-    description: "Add formatted text with LaTeX support"
-  },
-  {
-    type: "answer",
-    icon: "✏️",
-    label: "Answer Box",
-    description: "Add an answer input area"
-  },
-  {
-    type: "image",
-    icon: "🖼️",
-    label: "Image Block",
-    description: "Upload and display an image"
-  }
-];
 
 export interface WorkspaceAreaProps {
   assignment: Assignment | null;
@@ -122,25 +53,6 @@ function WorkspaceAreaComponent({
   const [showPreview, setShowPreview] = useState(false);
   const [showPublish, setShowPublish] = useState(false);
 
-  // Workspace drop handling
-  const [, drop] = useDrop(() => ({
-    accept: [ItemTypes.BLOCK, ItemTypes.TEMPLATE],
-    drop(item: DragItem, monitor) {
-      const dropOffset = monitor.getClientOffset();
-      const workspaceElement = document.getElementById('workspace');
-      
-      if (!dropOffset || !workspaceElement) return;
-
-      const workspaceRect = workspaceElement.getBoundingClientRect();
-      const x = snapToGrid(dropOffset.x - workspaceRect.left);
-      const y = snapToGrid(dropOffset.y - workspaceRect.top);
-
-      if (item.type === ItemTypes.TEMPLATE && item.templateType) {
-        addBlock(item.templateType, { x, y });
-      }
-    },
-  }), [blocks]);
-
   // Snap position to grid
   const snapToGrid = (value: number): number => {
     return Math.round(value / GRID_SIZE) * GRID_SIZE;
@@ -165,6 +77,24 @@ function WorkspaceAreaComponent({
       return horizontalOverlap && verticalOverlap;
     });
   };
+
+  const [, drop] = useDrop(() => ({
+    accept: ['BLOCK', 'TEMPLATE'],
+    drop: (item: DragItem, monitor) => {
+      const dropOffset = monitor.getClientOffset();
+      const workspaceElement = document.getElementById('workspace');
+      
+      if (!dropOffset || !workspaceElement) return;
+
+      const workspaceRect = workspaceElement.getBoundingClientRect();
+      const x = snapToGrid(dropOffset.x - workspaceRect.left);
+      const y = snapToGrid(dropOffset.y - workspaceRect.top);
+
+      if (item.type === 'TEMPLATE' && item.templateType) {
+        addBlock(item.templateType, { x, y });
+      }
+    },
+  }), [blocks]);
 
   const addBlock = (type: Block['type'], position: Position) => {
     const newBlock: Block = {
@@ -387,32 +317,34 @@ function WorkspaceAreaComponent({
         </div>
       </div>
 
-      {/* Block Templates */}
-      <div className="grid grid-cols-3 gap-4">
-        {blockTemplates.map((template) => (
-          <TemplateCard key={template.type} template={template} />
-        ))}
-      </div>
+      {/* Workspace */}
+      <div className="flex">
+        <BlockTemplatesSidebar />
+        
+        {/* Drop Area */}
+        <div 
+          ref={drop}
+          id="workspace"
+          className="flex-1 relative p-4 min-h-[600px]"
+          style={{ position: 'relative', overflow: 'hidden' }}
+        >
+          {/* Grid Background */}
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, #e5e7eb 1px, transparent 1px),
+                linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)
+              `,
+              backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
+              zIndex: 0
+            }}
+          />
 
-
-      {/* Drop Area */}
-      <div ref={drop} className="flex-1 relative p-4" style={{ position: 'relative', overflow: 'hidden', width: '100%', height: '80vh' }}>
-        {/* Grid Background */}
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `
-              linear-gradient(to right, #e5e7eb 1px, transparent 1px),
-              linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)
-            `,
-            backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
-            zIndex: 0
-          }}
-        />
-
-        {/* Blocks */}
-        <div className="relative" style={{ zIndex: 1, position: 'relative' }}>
-          {blocks.map((block, index) => renderBlock(block, index))}
+          {/* Blocks */}
+          <div className="relative" style={{ zIndex: 1 }}>
+            {blocks.map((block, index) => renderBlock(block, index))}
+          </div>
         </div>
       </div>
 
