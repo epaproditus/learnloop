@@ -1,4 +1,4 @@
-but import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Assignment } from "../../types/Assignment";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
