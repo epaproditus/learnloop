@@ -36,10 +36,15 @@ class GoogleClassroomService {
       script.src = "https://apis.google.com/js/api.js";
       script.onload = () => {
         console.log('Google API client loaded, initializing...');
+        
+        // Log the environment variables
+        console.log('Google API Key:', import.meta.env.VITE_GOOGLE_API_KEY);
+        console.log('Google Client ID:', import.meta.env.VITE_GOOGLE_CLIENT_ID);
+        
         window.gapi.load("client:auth2", {
           callback: async () => {
             try {
-              await window.gapi.client.init({
+              const initParams = {
                 apiKey: import.meta.env.VITE_GOOGLE_API_KEY,
                 clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
                 discoveryDocs: [
@@ -50,7 +55,12 @@ class GoogleClassroomService {
                   "https://www.googleapis.com/auth/classroom.coursework.students",
                   "https://www.googleapis.com/auth/classroom.rosters.readonly",
                 ].join(" "),
-              });
+              };
+              
+              // Log the initialization parameters
+              console.log('Initialization parameters:', initParams);
+              
+              await window.gapi.client.init(initParams);
               console.log('Google API client initialized successfully');
               resolve();
             } catch (error: unknown) {
