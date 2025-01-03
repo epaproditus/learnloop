@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useDrag } from "react-dnd";
 import { cn } from "../../../lib/utils";
 
 const GRID_SIZE = 20;
@@ -9,6 +10,8 @@ interface ResizableBlockProps {
   size: { width: number; height: number };
   isSelected: boolean;
   isPreview?: boolean;
+  type?: string;
+  isTemplate?: boolean;
   onSelect: () => void;
   onDeselect: () => void;
   onSizeChange: (size: { width: number; height: number }) => void;
@@ -19,6 +22,8 @@ interface ResizableBlockProps {
 }
 
 export const ResizableBlock: React.FC<ResizableBlockProps> = ({
+  type,
+  isTemplate = false,
   id,
   position,
   size,
@@ -35,6 +40,24 @@ export const ResizableBlock: React.FC<ResizableBlockProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const ref = useRef<HTMLDivElement>(null);
+
+  const [{ isDragging: isDndDragging }, drag] = useDrag(() => ({
+    type: type || 'BLOCK',
+    item: () => ({
+      id,
+      type,
+      position,
+      size,
+      isTemplate
+    }),
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging()
+    }),
+    canDrag: !isPreview
+  }));
+  
+  drag(ref);
 
   // Snap value to grid
   const snapToGrid = (value: number): number => {
@@ -68,7 +91,7 @@ export const ResizableBlock: React.FC<ResizableBlockProps> = ({
     onSelect();
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
+  const handleMouseMove = useCallback((e: MouseEvent) => {
     if (isDragging) {
       const newX = snapToGrid(Math.max(0, e.clientX - dragStart.x));
       const newY = snapToGrid(Math.max(0, e.clientY - dragStart.y));
@@ -86,15 +109,15 @@ export const ResizableBlock: React.FC<ResizableBlockProps> = ({
         y: e.clientY,
       });
     }
-  };
+  }, [isDragging, isResizing, dragStart, onPositionChange, onSizeChange, size.width, size.height]);
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     if (isDragging) {
       onDragEnd?.();
     }
     setIsDragging(false);
     setIsResizing(false);
-  };
+  }, [isDragging, onDragEnd]);
 
   useEffect(() => {
     if (isDragging || isResizing) {
@@ -105,14 +128,13 @@ export const ResizableBlock: React.FC<ResizableBlockProps> = ({
         window.removeEventListener("mouseup", handleMouseUp);
       };
     }
-  }, [isDragging, isResizing]);
+  }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
 
   return (
     <div
       className={cn(
         "absolute bg-white rounded-lg shadow-lg transition-shadow",
         isSelected ? "ring-2 ring-indigo-500 shadow-lg" : "border border-gray-200",
-        isDragging && "cursor-grabbing",
         isResizing && "cursor-nwse-resize",
         isPreview && "pointer-events-none"
       )}
@@ -124,7 +146,7 @@ export const ResizableBlock: React.FC<ResizableBlockProps> = ({
         zIndex: isSelected ? 10 : 1,
       }}
       onMouseDown={(e) => {
-        if (!isPreview) {
+        if (!isPreview && e.target === e.currentTarget) {
           e.stopPropagation();
           onSelect();
         }
@@ -134,9 +156,12 @@ export const ResizableBlock: React.FC<ResizableBlockProps> = ({
     >
       {/* Drag handle */}
       <div
+        ref={ref}
         className={cn(
           "absolute top-0 left-0 right-0 h-6 bg-gray-100 rounded-t-lg cursor-move flex items-center px-2 text-xs text-gray-500 select-none",
-          isSelected && "bg-indigo-50"
+          isSelected && "bg-indigo-50",
+          (isDragging || isDndDragging) && "cursor-grabbing",
+          isTemplate && "cursor-move"
         )}
         onMouseDown={handleDragStart}
       >

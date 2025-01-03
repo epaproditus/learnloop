@@ -1,4 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { DndProvider, useDrag, useDrop } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+import { XYCoord } from "react-dnd";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
 import { ResizableBlock } from "./blocks/ResizableBlock";
@@ -11,12 +14,59 @@ import type { Assignment, Block, Position, Size } from "../../types/Assignment";
 
 const GRID_SIZE = 20;
 const SIDEBAR_WIDTH = 240;
+const DEFAULT_BLOCK_WIDTH = 600;
+const DEFAULT_BLOCK_HEIGHT = 200;
 
 interface BlockTemplate {
   type: Block['type'];
   icon: string;
   label: string;
   description: string;
+}
+
+interface TemplateCardProps {
+  template: BlockTemplate;
+}
+
+const TemplateCard: React.FC<TemplateCardProps> = ({ template }) => {
+  const [{ isDragging }, drag] = useDrag(() => ({
+    type: ItemTypes.TEMPLATE,
+    item: { type: ItemTypes.TEMPLATE, templateType: template.type },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  }));
+
+  return (
+    <Card
+      ref={drag}
+      className={`cursor-move hover:shadow-md transition-shadow ${
+        isDragging ? 'opacity-50' : 'opacity-100'
+      }`}
+    >
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <div className="text-2xl">{template.icon}</div>
+          <div>
+            <h3 className="font-medium">{template.label}</h3>
+            <p className="text-sm text-gray-500">{template.description}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const ItemTypes = {
+  BLOCK: 'block',
+  TEMPLATE: 'template'
+};
+
+interface DragItem {
+  type: string;
+  id?: string;
+  templateType?: Block['type'];
+  initialOffset?: XYCoord;
 }
 
 const blockTemplates: BlockTemplate[] = [
@@ -48,7 +98,15 @@ export interface WorkspaceAreaProps {
   onBack: () => void;
 }
 
-export function WorkspaceArea({
+export function WorkspaceArea(props: WorkspaceAreaProps) {
+  return (
+    <DndProvider backend={HTML5Backend}>
+      <WorkspaceAreaComponent {...props} />
+    </DndProvider>
+  );
+}
+
+function WorkspaceAreaComponent({
   assignment,
   onCreate,
   onUpdate,
@@ -64,12 +122,31 @@ export function WorkspaceArea({
   const [showPreview, setShowPreview] = useState(false);
   const [showPublish, setShowPublish] = useState(false);
 
+  // Workspace drop handling
+  const [, drop] = useDrop(() => ({
+    accept: [ItemTypes.BLOCK, ItemTypes.TEMPLATE],
+    drop(item: DragItem, monitor) {
+      const dropOffset = monitor.getClientOffset();
+      const workspaceElement = document.getElementById('workspace');
+      
+      if (!dropOffset || !workspaceElement) return;
+
+      const workspaceRect = workspaceElement.getBoundingClientRect();
+      const x = snapToGrid(dropOffset.x - workspaceRect.left);
+      const y = snapToGrid(dropOffset.y - workspaceRect.top);
+
+      if (item.type === ItemTypes.TEMPLATE && item.templateType) {
+        addBlock(item.templateType, { x, y });
+      }
+    },
+  }), [blocks]);
+
   // Snap position to grid
   const snapToGrid = (value: number): number => {
     return Math.round(value / GRID_SIZE) * GRID_SIZE;
   };
 
-  // Check for collisions with other blocks
+  // Check for collisions
   const hasCollision = (index: number, newPosition: Position, newSize: Size): boolean => {
     const block = blocks[index];
     if (!block) return false;
@@ -89,7 +166,7 @@ export function WorkspaceArea({
     });
   };
 
-  const addBlock = (type: Block['type']) => {
+  const addBlock = (type: Block['type'], position: Position) => {
     const newBlock: Block = {
       id: crypto.randomUUID(),
       type,
@@ -98,8 +175,8 @@ export function WorkspaceArea({
       assignment_id: assignment?.id || "",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      position: { x: SIDEBAR_WIDTH + GRID_SIZE, y: blocks.length * (GRID_SIZE * 6) },
-      size: { width: 600, height: 200 },
+      position,
+      size: { width: DEFAULT_BLOCK_WIDTH, height: DEFAULT_BLOCK_HEIGHT },
     };
 
     setBlocks([...blocks, newBlock]);
@@ -289,8 +366,8 @@ export function WorkspaceArea({
               id="maxPoints"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               value={maxPoints}
-              onChange={(e) => setMaxPoints(Number(e.target.value))}
-              min="0"
+              onChange={(e) => setMaxPoints(parseInt(e.target.value))}
+              placeholder="Maximum points"
             />
           </div>
 
@@ -299,58 +376,43 @@ export function WorkspaceArea({
               Due Date
             </label>
             <input
-              type="datetime-local"
+              type="date"
               id="dueDate"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
+              placeholder="Due date"
             />
           </div>
         </div>
       </div>
 
-      {/* Workspace */}
-      <div className="flex bg-gray-50 rounded-lg min-h-[600px] relative">
-        {/* Block Templates Sidebar */}
-        <div className="w-60 bg-white border-r border-gray-200 p-4 flex flex-col gap-2">
-          <h2 className="text-lg font-semibold mb-2">Add Block</h2>
-          {blockTemplates.map((template) => (
-            <Card
-              key={template.type}
-              className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => addBlock(template.type)}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <div className="text-2xl">{template.icon}</div>
-                  <div>
-                    <h3 className="font-medium">{template.label}</h3>
-                    <p className="text-sm text-gray-500">{template.description}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      {/* Block Templates */}
+      <div className="grid grid-cols-3 gap-4">
+        {blockTemplates.map((template) => (
+          <TemplateCard key={template.type} template={template} />
+        ))}
+      </div>
 
-        {/* Block Workspace */}
-        <div className="flex-1 relative p-4">
-          {/* Grid Background */}
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: `
-                linear-gradient(to right, #e5e7eb 1px, transparent 1px),
-                linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)
-              `,
-              backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
-            }}
-          />
 
-          {/* Blocks */}
-          <div className="relative">
-            {blocks.map((block, index) => renderBlock(block, index))}
-          </div>
+      {/* Drop Area */}
+      <div ref={drop} className="flex-1 relative p-4" style={{ position: 'relative', overflow: 'hidden' }}>
+        {/* Grid Background */}
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, #e5e7eb 1px, transparent 1px),
+              linear-gradient(to bottom, #e5e7eb 1px, transparent 1px)
+            `,
+            backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
+            zIndex: 0
+          }}
+        />
+
+        {/* Blocks */}
+        <div className="relative" style={{ zIndex: 1, position: 'relative' }}>
+          {blocks.map((block, index) => renderBlock(block, index))}
         </div>
       </div>
 
