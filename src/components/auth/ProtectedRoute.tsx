@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useDevMode } from "../../contexts/DevModeContext";
 import { supabase } from "../../lib/supabase";
 
@@ -11,26 +11,36 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { isDevMode } = useDevMode();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
-    if (!isDevMode) {
-      checkAuth();
-    } else {
-      setIsLoading(false);
-    }
-  }, [isDevMode]);
+    const checkAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log("Current session:", session); // Debug log
+        setIsAuthenticated(!!session);
+      } catch (error) {
+        console.error('Error checking auth status:', error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const checkAuth = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
+    // Check initial auth state
+    checkAuth();
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log("Auth state changed:", _event, session); // Debug log
       setIsAuthenticated(!!session);
-    } catch (error) {
-      console.error('Error checking auth status:', error);
-      setIsAuthenticated(false);
-    } finally {
       setIsLoading(false);
-    }
-  };
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   if (isLoading) {
     return (
@@ -41,9 +51,11 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   if (!isDevMode && !isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    console.log("Not authenticated, redirecting to login"); // Debug log
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  console.log("Rendering protected content"); // Debug log
   return <>{children}</>;
 };
 

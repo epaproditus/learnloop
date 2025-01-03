@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 import { useDevMode } from "../../contexts/DevModeContext";
@@ -7,6 +7,7 @@ import { supabase } from "../../lib/supabase";
 
 export function LoginCard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isDevMode, setIsDevMode } = useDevMode();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -19,7 +20,9 @@ export function LoginCard() {
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
+            scope: 'https://www.googleapis.com/auth/classroom.courses https://www.googleapis.com/auth/classroom.coursework.students https://www.googleapis.com/auth/classroom.rosters',
           },
+          redirectTo: window.location.origin + '/teacher',
         },
       });
 
