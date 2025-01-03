@@ -1,91 +1,119 @@
-# Quick Resume Guide
+# Project Resume Guide
 
-## Current Status
-- Working on teacher dashboard block system
-- Dev mode enabled for bypassing auth
-- Basic block types implemented (Text, Answer, Image)
-- Multiple workspace modes available
-
-## Key Files
-1. Project Overview: `PROJECT_STATE.md`
-2. Version History: `VERSION.md`
-3. Main Components:
-   - `src/pages/TeacherDashboard.tsx`
-   - `src/components/teacher/WorkspaceArea.tsx`
-   - `src/components/teacher/blocks/*.tsx`
-
-## Immediate Tasks
-
-### Bug Fixes
-- [ ] Fix block overlap during drag
-- [ ] Improve grid snapping precision
-- [ ] Fix color picker state persistence
-- [ ] Add ESC key support for fullscreen images
-- [ ] Optimize LaTeX rendering
-
-### Next Features
-- [ ] Add keyboard shortcuts
-- [ ] Implement block grouping
-- [ ] Add more LaTeX templates
-- [ ] Add image annotations
+This guide helps you pick up where development left off and understand the current state of the project.
 
 ## Quick Start
-1. Start dev server:
-   ```bash
-   npm run dev
-   ```
-2. Open http://localhost:8080
-3. Use dev mode toggle in top-left
 
-## Component Status
-
-### Working
-- ✅ Dev mode toggle
-- ✅ Block drag and drop
-- ✅ Basic text editing
-- ✅ LaTeX support
-- ✅ Image upload
-- ✅ Workspace modes
-
-### Needs Attention
-- ⚠️ Block positioning system
-- ⚠️ LaTeX rendering optimization
-- ⚠️ Color picker state
-- ⚠️ Image zoom controls
-
-## Dependencies to Install
+1. Install dependencies:
 ```bash
-# Core dependencies
-npm install @tiptap/react @tiptap/starter-kit @tiptap/extension-text-style @tiptap/extension-color
-
-# UI components
-npm install @radix-ui/react-popover @radix-ui/react-slider
-
-# LaTeX support
-npm install katex
+npm install
 ```
 
-## Development Notes
-- Use backticks for LaTeX: \`x^2\`
-- Grid size is 20px
-- Minimum block size: 200x100
-- Dev mode persists in localStorage
+2. Set up environment variables in `.env`:
+```
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_GOOGLE_CLIENT_ID=your_google_client_id
+VITE_GOOGLE_CLIENT_SECRET=your_google_client_secret
+```
 
-## Testing Steps
-1. Create each type of block
-2. Test LaTeX input
-3. Try resizing and moving blocks
-4. Test workspace mode switching
-5. Verify preview functionality
+3. Configure OAuth redirects:
+   - In Supabase Dashboard: Set redirect URL to http://localhost:8080
+   - In Google Cloud Console: Set authorized redirect URI to http://localhost:8080
 
-## Branch Structure
-- main: Current stable version
-- dev: Active development
-- feature/*: New features
-- bugfix/*: Bug fixes
+4. Start development server:
+```bash
+npm run dev
+```
 
-## Contact
-For questions about current implementation:
-- Check comments in component files
-- Refer to PROJECT_STATE.md
-- Review VERSION.md for history
+## Current State
+
+The project is at a transition point between two major features:
+
+1. Authentication System (Working)
+   - Located in:
+     - src/lib/supabase.ts
+     - src/components/auth/LoginCard.tsx
+     - src/components/auth/ProtectedRoute.tsx
+     - src/pages/Login.tsx
+     - src/contexts/DevModeContext.tsx
+
+2. Block System (Needs Restoration)
+   - Last working version: commit d10c860
+   - Key files to restore:
+     - src/components/teacher/blocks/ResizableBlock.tsx
+     - src/components/teacher/ProblemCreator.tsx
+     - src/components/teacher/WorkspaceArea.tsx
+
+## Development Flow
+
+1. Authentication:
+   - Dev mode: Click "Continue as Teacher" for quick testing
+   - Production: Use Google OAuth sign-in
+   - Protected routes redirect to /login if not authenticated
+
+2. Teacher Dashboard:
+   - Create/edit assignments using block system
+   - Blocks should be draggable and resizable
+   - Grid snapping helps with alignment
+   - Collision detection prevents overlap
+
+## Key Features
+
+### Authentication
+- Google OAuth via Supabase
+- Dev mode for local testing
+- Persistent sessions
+- Protected routes
+
+### Block System (To Be Restored)
+- Drag and drop interface
+- Grid snapping
+- Collision detection
+- Block types:
+  - Text (with rich text editor)
+  - Answer (for student responses)
+  - Image (for media content)
+
+## Common Issues & Solutions
+
+1. Auth Redirect Issues
+   - Ensure redirect URLs match in both Supabase and Google Console
+   - Port must be 8080 (configured in vite.config.ts)
+   - Check browser console for CORS errors
+
+2. Block System Issues
+   - If blocks aren't draggable, check ResizableBlock component
+   - Grid snapping uses 20px increments
+   - Z-index handles block stacking
+
+## Next Steps
+
+1. Immediate Tasks
+   - Restore block system from commit d10c860
+   - Integrate auth system with restored blocks
+   - Test all block types with auth
+
+2. Future Features
+   - Student dashboard
+   - Assignment submission
+   - Progress tracking
+   - Teacher feedback
+
+## Testing
+
+1. Dev Mode Testing
+   - Toggle dev mode in top-left corner
+   - No auth required in dev mode
+   - Data persists in local storage
+
+2. Production Testing
+   - Requires valid Google account
+   - Supabase must be properly configured
+   - Check network tab for auth flows
+
+## Additional Resources
+
+- [Supabase Auth Docs](https://supabase.com/docs/guides/auth)
+- [Google OAuth Setup](https://console.cloud.google.com/apis/credentials)
+- [Vite Config Guide](https://vitejs.dev/config/)

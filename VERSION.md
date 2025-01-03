@@ -1,92 +1,52 @@
 # Version History
 
-## v0.1.0 - Initial Block System
-- Basic block system with drag-and-drop
-- Text, Answer, and Image blocks
-- LaTeX support with backtick syntax
-- Dev mode for bypassing auth
+## Current Version
 
-### Key Components
-- TeacherDashboard: v0.1.0
-  - Dev mode toggle
-  - Basic layout
-- WorkspaceArea: v0.1.0
-  - Grid system
-  - Block management
-  - Multiple workspace modes
-- Blocks:
-  - TextBlock: v0.1.0 (TipTap + LaTeX)
-  - AnswerBlock: v0.1.0 (Text + LaTeX input)
-  - ImageBlock: v0.1.0 (Upload + Fullscreen)
+### v0.2.0 (In Progress)
+- Added authentication system with Supabase
+- Added Google OAuth integration
+- Added dev mode for local testing
+- Added protected routes
+- Fixed port configuration (now using 8080)
 
-### Known Bugs (with minimal reproduction steps)
+### v0.1.0 (Stable - commit d10c860)
+- Initial teacher dashboard implementation
+- Block system with drag and resize
+- Grid snapping and collision detection
+- Block templates sidebar
+- Block types:
+  - Text blocks with rich text editing
+  - Answer blocks for student input
+  - Image blocks for media content
 
-1. Block Overlap Issue
-```typescript
-// To reproduce:
-1. Create two text blocks
-2. Drag one block near another
-3. Blocks may overlap instead of snapping to grid
-```
+## Upcoming Changes
 
-2. Color Picker Reset
-```typescript
-// To reproduce:
-1. Add a text block
-2. Select text and open color picker
-3. Choose a color
-4. Click outside the editor
-5. Color picker state resets
-```
+### v0.2.1 (Planned)
+- Restore block system functionality
+- Integrate authentication with block system
+- Improve dev mode UX
+- Add proper error handling for auth flows
 
-3. LaTeX Rendering
-```typescript
-// To reproduce:
-1. Add a text block
-2. Enter LaTeX: `x^2 + y^2 = z^2`
-3. Add more text after
-4. LaTeX rendering may flicker
-```
+### v0.3.0 (Planned)
+- Student dashboard implementation
+- Assignment submission system
+- Real-time progress tracking
+- Teacher feedback system
 
-4. Image Zoom
-```typescript
-// To reproduce:
-1. Add an image block
-2. Upload an image
-3. Enter fullscreen
-4. Use zoom slider
-5. Zoom transitions may be jerky
-```
+## Development Notes
 
-### Component Dependencies
-```
-TeacherDashboard
-└─ WorkspaceArea
-   ├─ ProblemCreator
-   └─ Blocks
-      ├─ TextBlock (depends on: TipTap, KaTeX)
-      ├─ AnswerBlock (depends on: KaTeX)
-      └─ ImageBlock (depends on: Slider)
-```
+### Current Focus
+1. Restoring block system while maintaining auth improvements
+2. Ensuring smooth integration between components
+3. Maintaining dev mode for easy testing
 
-### Required Environment
-- Node.js 16+
-- React 18
-- Vite
-- TipTap
-- KaTeX
-- Radix UI
-- Tailwind CSS
+### Technical Debt
+1. Need to properly type all components
+2. Need to add error boundaries
+3. Need to improve state management
+4. Need to add proper loading states
 
-### Quick Start for Resume
-1. Check PROJECT_STATE.md for current status
-2. Run development server: `npm run dev`
-3. Access teacher dashboard with dev mode
-4. Known issues are tracked with [ ] checkboxes
-
-### Next Version Plans (v0.2.0)
-- Fix current bugs
-- Add keyboard shortcuts
-- Improve block positioning
-- Enhance LaTeX integration
-- Add block grouping
+### Breaking Changes
+- Port changed from 5173 to 8080
+- Authentication required for all routes (except login)
+- Dev mode now persists across refreshes

@@ -1,13 +1,110 @@
 import { useState } from "react";
-import { ProblemCreator } from "../components/teacher/ProblemCreator";
-import { WorkspaceArea } from "../components/teacher/WorkspaceArea";
-import { Button } from "../components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { Button } from "../components/ui/button";
 import { useDevMode } from "../contexts/DevModeContext";
+import { AssignmentsList } from "../components/teacher/AssignmentsList";
+import { StudentProgress } from "../components/teacher/StudentProgress";
+import { WorkspaceArea } from "../components/teacher/WorkspaceArea";
+import { supabase } from "../lib/supabase";
+import type { Assignment } from "../types/Assignment";
 
-const TeacherDashboard = () => {
+export default function TeacherDashboard() {
   const navigate = useNavigate();
   const { isDevMode, setIsDevMode } = useDevMode();
+  const [currentView, setCurrentView] = useState<"list" | "create" | "edit" | "progress">("list");
+  const [currentAssignment, setCurrentAssignment] = useState<Assignment | null>(null);
+
+  const handleCreateAssignment = async (assignment: Partial<Assignment>) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user && !isDevMode) return;
+
+      const { data, error } = await supabase
+        .from('assignments')
+        .insert({
+          ...assignment,
+          teacher_id: user?.id || 'dev-user',
+          status: 'draft',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        setCurrentAssignment(data as Assignment);
+        setCurrentView("edit");
+      }
+    } catch (error) {
+      console.error('Error creating assignment:', error);
+    }
+  };
+
+  const handleUpdateAssignment = async (assignment: Partial<Assignment>) => {
+    if (!currentAssignment) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user && !isDevMode) return;
+
+      const { data, error } = await supabase
+        .from('assignments')
+        .update({
+          ...assignment,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', currentAssignment.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        setCurrentAssignment(data as Assignment);
+      }
+    } catch (error) {
+      console.error('Error updating assignment:', error);
+    }
+  };
+
+  const handlePublishAssignment = async (courseId: string, assignment: Assignment) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user && !isDevMode) return;
+
+      const { error } = await supabase
+        .from('assignments')
+        .insert({
+          ...assignment,
+          teacher_id: user?.id || 'dev-user',
+          status: 'published',
+          published_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          google_classroom_id: courseId,
+        });
+
+      if (error) throw error;
+      setCurrentView("list");
+    } catch (error) {
+      console.error('Error publishing assignment:', error);
+    }
+  };
+
+  const handleEditAssignment = (assignment: Assignment) => {
+    setCurrentAssignment(assignment);
+    setCurrentView("edit");
+  };
+
+  const handleViewProgress = (assignment: Assignment) => {
+    setCurrentAssignment(assignment);
+    setCurrentView("progress");
+  };
+
+  const handleBack = () => {
+    setCurrentView("list");
+    setCurrentAssignment(null);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -24,41 +121,49 @@ const TeacherDashboard = () => {
               {isDevMode ? "Dev Mode: ON" : "Dev Mode: OFF"}
             </Button>
           </div>
-          {!isDevMode && (
-            <Button
-              variant="outline"
-              onClick={() => navigate("/login")}
-            >
-              Sign Out
-            </Button>
-          )}
+          <div className="flex items-center gap-4">
+            {currentView === "list" && (
+              <Button onClick={() => setCurrentView("create")}>
+                Create Assignment
+              </Button>
+            )}
+            {!isDevMode && (
+              <Button
+                variant="outline"
+                onClick={() => navigate("/login")}
+              >
+                Sign Out
+              </Button>
+            )}
+          </div>
         </div>
       </header>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex gap-8">
-          {/* Left sidebar - Problem Blocks */}
-          <div className="w-80 bg-white p-4 rounded-lg shadow">
-            <h2 className="text-lg font-semibold mb-4">Problem Blocks</h2>
-            <div className="space-y-4">
-              <ProblemCreator />
-            </div>
-          </div>
 
-          {/* Main workspace area */}
-          <div className="flex-1 bg-white p-6 rounded-lg shadow">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-semibold">Assignment Workspace</h2>
-              <div className="space-x-2">
-                <Button variant="outline" size="sm">Preview</Button>
-                <Button size="sm">Publish</Button>
-              </div>
-            </div>
-            <WorkspaceArea />
-          </div>
-        </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {currentView === "list" && (
+          <AssignmentsList
+            onEdit={handleEditAssignment}
+            onViewProgress={handleViewProgress}
+          />
+        )}
+
+        {(currentView === "create" || currentView === "edit") && (
+          <WorkspaceArea
+            assignment={currentAssignment}
+            onCreate={handleCreateAssignment}
+            onUpdate={handleUpdateAssignment}
+            onPublish={handlePublishAssignment}
+            onBack={handleBack}
+          />
+        )}
+
+        {currentView === "progress" && currentAssignment && (
+          <StudentProgress
+            assignment={currentAssignment}
+            onBack={handleBack}
+          />
+        )}
       </main>
     </div>
   );
-};
-
-export default TeacherDashboard;
+}

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect } from "react";
 
 interface DevModeContextType {
   isDevMode: boolean;
@@ -7,20 +7,31 @@ interface DevModeContextType {
 
 const DevModeContext = createContext<DevModeContextType | undefined>(undefined);
 
-export const DevModeProvider = ({ children }: { children: ReactNode }) => {
-  const [isDevMode, setIsDevMode] = useState(false);
+interface DevModeProviderProps {
+  children: ReactNode;
+}
+
+export function DevModeProvider({ children }: DevModeProviderProps) {
+  const [isDevMode, setIsDevMode] = useState(() => {
+    const saved = localStorage.getItem('devMode');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('devMode', JSON.stringify(isDevMode));
+  }, [isDevMode]);
 
   return (
     <DevModeContext.Provider value={{ isDevMode, setIsDevMode }}>
       {children}
     </DevModeContext.Provider>
   );
-};
+}
 
-export const useDevMode = () => {
+export function useDevMode() {
   const context = useContext(DevModeContext);
   if (context === undefined) {
-    throw new Error('useDevMode must be used within a DevModeProvider');
+    throw new Error("useDevMode must be used within a DevModeProvider");
   }
   return context;
-};
+}
